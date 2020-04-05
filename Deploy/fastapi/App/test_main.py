@@ -1,7 +1,6 @@
 from fastapi.testclient import TestClient
 from main import app
 import pytest
-import json
 
 client = TestClient(app)
 
@@ -10,7 +9,6 @@ def test_hello_world():
     response = client.get('/')
     assert response.status_code == 200
     assert response.json() == {"message" : "Hello World during the coronavirus pandemic!"}
-
 
 @pytest.mark.parametrize("name",["Ala", "Beata","Kamil"])
 def test_hello_name(name):
@@ -38,4 +36,25 @@ def test_method_DELETE():
     assert response.status_code == 200
     assert response.json() == {"method": "DELETE"}
 
+def test_recieve_patient():
+    response1 = client.post("/patient",json={"name":"NAME0", "surename":"SURNAME0"})
+    assert response1.status_code == 200
+    response2 = client.post("/patient",json={"name":"NAME1", "surename":"SURNAME1"})
+    assert response2.status_code == 200
+    assert response1.json() == {"id": 0, "patient": {"name": "NAME0", "surename": "SURNAME0"}}
+    assert response2.json() == {"id": 1, "patient": {"name": "NAME1", "surename": "SURNAME1"}}
 
+
+def test_give_patient_under_id():
+    client.post("/patient",json={"name":"NAME0", "surename":"SURNAME0"})
+    response = client.get("/patient/0")
+    assert response.status_code == 200
+    assert response.json() == {"name": "NAME0", "surename": "SURNAME0"}
+
+    client.post("/patient",json={"name":"NAME1", "surename":"SURNAME1"})
+    response = client.get("/patient/1")
+    assert response.status_code == 200
+    assert response.json() == {"name": "NAME1", "surename": "SURNAME1"}
+
+    response = client.get("/patient/4")
+    assert response.status_code == 200
