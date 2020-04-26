@@ -8,7 +8,8 @@ client = TestClient(app)
 def test_hello_world():
     response = client.get('/')
     assert response.status_code == 200
-    assert response.json() == {"message" : "Hello World during the coronavirus pandemic!"}
+    response = client.get("/welcome")
+    assert response.status_code == 200
 
 @pytest.mark.parametrize("name",["Ala", "Beata","Kamil"])
 def test_hello_name(name):
@@ -57,4 +58,26 @@ def test_give_patient_under_id():
     assert response.json() == {"name": "NAME1", "surename": "SURNAME1"}
 
     response = client.get("/patient/4")
+    assert response.status_code == 204
+
+def test_reset_list():
+    response = client.get("/reset")
+
     assert response.status_code == 200
+    assert response.json() == {"message" : "Paient list cleared"}
+
+    client.post("/patient",json={"name":"Jakub", "surename":"Szumski"})
+    response = client.get("/patient/0")
+    assert response.status_code == 200
+    assert response.json() == {"name": "Jakub", "surename": "Szumski"}
+
+    client.get("/reset")
+
+
+def test_login():
+    response = client.post("/login")
+
+    assert response.status_code == 200
+    
+
+

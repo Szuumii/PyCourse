@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import json
 from typing import Dict
@@ -26,11 +26,19 @@ class PatientResp(BaseModel):
 def root():
     return {"message": "Hello World during the coronavirus pandemic!"}
 
+@app.get("/welcome")
+def welcome():
+    return("!Welcome to my webpage!")
+
 
 @app.get('/hello/{name}', response_model=HelloNameResp)
 def hello_name(name: str):
     return HelloNameResp(message=f"Hello {name}")
 
+@app.get("/reset")
+def clear_patients():
+    app.patient_list.clear()
+    return HelloNameResp(message="Paient list cleared")
 
 @app.get("/method")
 def method_GET():
@@ -56,5 +64,7 @@ def recieve_patient(req: PatientRq):
 @app.get("/patient/{pk}",response_model=PatientRq)
 def return_patient_under_id(pk: int):
     if (len(app.patient_list)-1) < pk:
-        raise HTTPException(status_code=404, detail="Patient not found")
+        raise HTTPException(status_code=204, detail="Patient not found")
     return app.patient_list[pk]
+
+
