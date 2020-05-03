@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query, Request
-#from fastapi.encoders import jsonable_encoder
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 import json
 import sqlite3
@@ -16,13 +16,13 @@ class AlbumResp(BaseModel):
     ArtistId: int
 
 class CustomerRq(BaseModel):
-    company: str
-    address: str
-    city: str
-    state: str
-    country: str
-    postalcode: str
-    fax: str
+    Company: str
+    Address: str
+    City: str
+    State: str
+    Country: str
+    Postalcode: str
+    Fax: str
 
 class CustomerResp(BaseModel):
     CustomerId: int = None
@@ -100,8 +100,8 @@ async def post_album(req: AlbumRq):
     return AlbumResp(AlbumId=new_album_id,Title=req.title,ArtistId=req.artist_id)
 
 
-@app.get("/customers/{customer_id}", response_model=CustomerResp)
-async def put_customer(customer_id: int):
+@app.put("/customers/{customer_id}", response_model=CustomerResp)
+async def put_customer(customer_id: int, req : CustomerResp):
 
     app.db_connection.row_factory = sqlite3.Row
 
@@ -110,11 +110,16 @@ async def put_customer(customer_id: int):
     if data is None:
         raise HTTPException(status_code=404, detail={"error": "str"})
     
-    response = CustomerResp( CustomerId= customer_id, FirstName= data["FirstName"], LastName= data["LastName"], Company= data["Company"], Address= data["Address"], City= data["City"], State= data["State"], Country= data["Country"], PostalCode= data["PostalCode"], Phone= data["Phone"], Fax= data["Fax"], Email= data["Email"], SupportRepId= data["SupportRepId"])
-
+    stored_item_data = data
+    stored_item_model = CustomerResp(**stored_item_data)
+    updated_data = req.dict(exclude_unset=True)
+    updated_item = stored_item_model.copy(update=updated_data)
     
+    cursor = app.db_connection.execute(    "UPDATE customers SET FirstName= ?, LastName= ?, Company= ?, Address= ?, City= ?, State= ?, Country= ?, PostalCode= ?, Phone= ?, Fax=?, Email= ? WHERE CustomerId = ?;"    , 
+    (updated_item.FirstName ,updated_item.LastName, updated_item.Company, updated_item.Address, updated_item.City, updated_item.State, updated_item.Country, updated_item.PostalCode, updated_item.Phone, updated_item.Fax, updated_item.Email, customer_id)  )
+    app.db_connection.commit()
 
-    return response
+    return updated_item
 
 
     
