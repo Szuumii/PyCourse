@@ -131,9 +131,13 @@ async def get_sales(category: str = Query(None)):
     if category == "customers":
         data = app.db_connection.execute(    "SELECT customers.CustomerId, Email, Phone, Total AS Sum FROM customers INNER JOIN invoices ON customers.CustomerId = invoices.InvoiceId ORDER BY Sum DESC, customers.CustomerId ASC;"  ).fetchall()
         
-        #if data is None:
-            #raise HTTPException(status_code=404, detail={"error": "str"})
         return data
-    else:
-        raise HTTPException(status_code=404, detail={"error": "str"})
+    
+    if category == "genres":
+        data = app.db_connection.execute(    "SELECT genres.Name, COUNT(genres.Name * invoice_items.Quantity) AS Sum FROM tracks JOIN genres ON tracks.GenreId = genres.GenreId JOIN invoice_items ON tracks.TrackId = invoice_items.TrackId GROUP BY genres.Name ORDER BY Sum DESC, genres.Name ASC;"  ).fetchall()         
+        return data
+    
+    
+    
+    raise HTTPException(status_code=404, detail={"error": "str"})
     
