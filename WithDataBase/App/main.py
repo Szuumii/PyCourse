@@ -58,14 +58,14 @@ def root():
 async def some_tracks(per_page: int = 10,page :int = 0):
     app.db_connection.row_factory = sqlite3.Row
     data = app.db_connection.execute(
-        "SELECT * FROM tracks ORDER BY TrackId ASC LIMIT ? OFFSET ?"
+        "SELECT * FROM tracks ORDER BY TrackId ASC LIMIT ? OFFSET ?;"
         , (per_page, page )).fetchall()
     return data
 
 @app.get("/albums/{album_id}")
 async def get_album_by_id(album_id: int):
     app.db_connection.row_factory = sqlite3.Row
-    data = app.db_connection.execute(    "SELECT * FROM albums WHERE AlbumId = ?"     , (album_id, )).fetchone()
+    data = app.db_connection.execute(    "SELECT * FROM albums WHERE AlbumId = ?;"     , (album_id, )).fetchone()
     return data
 
 
@@ -73,26 +73,26 @@ async def get_album_by_id(album_id: int):
 async def track_composer(composer_name: str = Query(None)):
     app.db_connection.row_factory = lambda cursor, x: x[0]
 
-    data = app.db_connection.execute(    'SELECT composer FROM tracks WHERE Composer = ?' , (composer_name, )  ).fetchone()
+    data = app.db_connection.execute(    'SELECT composer FROM tracks WHERE Composer = ?;' , (composer_name, )  ).fetchone()
 
     if data is None:
         raise HTTPException(status_code=404, detail={"error": "str"})
 
-    data = app.db_connection.execute(        'SELECT name FROM tracks WHERE composer = ?' ,(composer_name, )  ).fetchall()
+    data = app.db_connection.execute(        'SELECT name FROM tracks WHERE composer = ?;' ,(composer_name, )  ).fetchall()
     return data
 
 @app.post("/albums", response_model=AlbumResp, status_code=201)
 async def post_album(req: AlbumRq):
 
     app.db_connection.row_factory = lambda cursor, x: x[0]
-    data = app.db_connection.execute(    "SELECT * FROM artists WHERE ArtistId = ?"     , (req.artist_id, )).fetchone()
+    data = app.db_connection.execute(    "SELECT * FROM artists WHERE ArtistId = ?;"     , (req.artist_id, )).fetchone()
 
     if data is None:
         raise HTTPException(status_code=404, detail={"error": "str"})
     
     app.db_connection.row_factory = sqlite3.Row
 
-    cursor = app.db_connection.execute(    "INSERT INTO albums (Title, ArtistId) VALUES (?,?)"    , (req.title,req.artist_id )  )
+    cursor = app.db_connection.execute(    "INSERT INTO albums (Title, ArtistId) VALUES (?,?);"    , (req.title,req.artist_id )  )
     
     app.db_connection.commit()
     new_album_id = cursor.lastrowid
@@ -105,7 +105,7 @@ async def put_customer(customer_id: int, req : CustomerResp):
 
     app.db_connection.row_factory = sqlite3.Row
 
-    data = app.db_connection.execute(    "SELECT * FROM customers WHERE CustomerId = ?"     , (customer_id, )).fetchone()
+    data = app.db_connection.execute(    "SELECT * FROM customers WHERE CustomerId = ?;"     , (customer_id, )).fetchone()
 
     if data is None:
         raise HTTPException(status_code=404, detail={"error": "str"})
@@ -121,5 +121,19 @@ async def put_customer(customer_id: int, req : CustomerResp):
 
     return updated_item
 
+@app.get("/sales")
+async def get_sales(category: str = Query(None)):
 
+    # check if parameter is customers
+    app.db_connection.row_factory = sqlite3.Row
+    #lambda cursor, x: x[0]
+
+    if category == "customers":
+        data = app.db_connection.execute(    "SELECT customers.CustomerId, Email, Phone, Total AS Sum FROM customers INNER JOIN invoices ON customers.CustomerId = invoices.InvoiceId ORDER BY Sum DESC, customers.CustomerId ASC;"  ).fetchall()
+        
+        #if data is None:
+            #raise HTTPException(status_code=404, detail={"error": "str"})
+        return data
+    else:
+        raise HTTPException(status_code=404, detail={"error": "str"})
     
