@@ -16,13 +16,24 @@ class AlbumResp(BaseModel):
     ArtistId: int
 
 class CustomerRq(BaseModel):
-    Company: str
-    Address: str
-    City: str
-    State: str
-    Country: str
-    Postalcode: str
-    Fax: str
+    company: str = None
+    address: str = None
+    city: str = None
+    state: str = None
+    country: str = None
+    postalcode: str = None
+    fax: str = None
+
+
+class SwapData(BaseModel):
+    Company: str = None
+    Address: str = None
+    City: str = None
+    State: str = None
+    Country: str = None
+    PostalCode: str = None
+    Fax: str = None
+
 
 class CustomerResp(BaseModel):
     CustomerId: int = None
@@ -59,7 +70,7 @@ async def some_tracks(per_page: int = 10,page :int = 0):
     app.db_connection.row_factory = sqlite3.Row
     data = app.db_connection.execute(
         "SELECT * FROM tracks ORDER BY TrackId ASC LIMIT ? OFFSET ?;"
-        , (per_page, page )).fetchall()
+        , (per_page, page * per_page)).fetchall()
     return data
 
 @app.get("/albums/{album_id}")
@@ -69,7 +80,7 @@ async def get_album_by_id(album_id: int):
     return data
 
 
-@app.get("/tracks/composer/")
+@app.get("/tracks/composers/")
 async def track_composer(composer_name: str = Query(None)):
     app.db_connection.row_factory = lambda cursor, x: x[0]
 
@@ -78,7 +89,7 @@ async def track_composer(composer_name: str = Query(None)):
     if data is None:
         raise HTTPException(status_code=404, detail={"error": "str"})
 
-    data = app.db_connection.execute(        'SELECT name FROM tracks WHERE composer = ?;' ,(composer_name, )  ).fetchall()
+    data = app.db_connection.execute(        'SELECT name FROM tracks WHERE composer = ? ORDER BY name ASC;' ,(composer_name, )  ).fetchall()
     return data
 
 @app.post("/albums", response_model=AlbumResp, status_code=201)
@@ -101,7 +112,7 @@ async def post_album(req: AlbumRq):
 
 
 @app.put("/customers/{customer_id}", response_model=CustomerResp)
-async def put_customer(customer_id: int, req : CustomerResp):
+async def put_customer(customer_id: int, req : CustomerRq):
 
     app.db_connection.row_factory = sqlite3.Row
 
@@ -112,25 +123,25 @@ async def put_customer(customer_id: int, req : CustomerResp):
     
     stored_item_data = data
     stored_item_model = CustomerResp(**stored_item_data)
-    updated_data = req.dict(exclude_unset=True)
+    data_to_swap = SwapData(Company= req.company, Address= req.address, City= req.city, State= req.state, Country= req.country, PostalCode= req.postalcode, Fax= req.fax)
+    updated_data = data_to_swap.dict(exclude_none=True)
     updated_item = stored_item_model.copy(update=updated_data)
     
-    cursor = app.db_connection.execute(    "UPDATE customers SET FirstName= ?, LastName= ?, Company= ?, Address= ?, City= ?, State= ?, Country= ?, PostalCode= ?, Phone= ?, Fax=?, Email= ? WHERE CustomerId = ?;"    , 
-    (updated_item.FirstName ,updated_item.LastName, updated_item.Company, updated_item.Address, updated_item.City, updated_item.State, updated_item.Country, updated_item.PostalCode, updated_item.Phone, updated_item.Fax, updated_item.Email, customer_id)  )
+    
+    cursor = app.db_connection.execute(    "UPDATE customers SET Company= ?, Address= ?, City= ?, State= ?, Country= ?, PostalCode= ?, Fax=? WHERE CustomerId = ?;"    , 
+    (updated_item.Company, updated_item.Address, updated_item.City, updated_item.State, updated_item.Country, updated_item.PostalCode, updated_item.Fax, customer_id)  )
     app.db_connection.commit()
-
+    
     return updated_item
 
 @app.get("/sales")
 async def get_sales(category: str = Query(None)):
 
-    # check if parameter is customers
     app.db_connection.row_factory = sqlite3.Row
     #lambda cursor, x: x[0]
 
     if category == "customers":
-        data = app.db_connection.execute(    "SELECT customers.CustomerId, Email, Phone, Total AS Sum FROM customers INNER JOIN invoices ON customers.CustomerId = invoices.InvoiceId ORDER BY Sum DESC, customers.CustomerId ASC;"  ).fetchall()
-        
+        data = app.db_connection.execute(    "SELECT invoices.CustomerId, Email, Phone, ROUND(SUM(Total), 2) AS Sum FROM customers INNER JOIN invoices ON customers.CustomerId = invoices.CustomerId GROUP BY invoices.CustomerId ORDER BY Sum DESC, invoices.CustomerId ASC;"  ).fetchall()
         return data
     
     if category == "genres":
